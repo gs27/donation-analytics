@@ -72,27 +72,23 @@ class FindRepeatDonors():
              CMTE_ID=row['CMTE_ID']
              ZIP_CODE=row['ZIP_CODE']
              TRANSACTION_AMT=row['TRANSACTION_AMT']
-             if ZIP_CODE in dic_zips.keys():
-                 #if there is a ZIP Code key entry in the dictionary, add the Transaction Amount to the list
-                 dic_zips[ZIP_CODE].append(int(TRANSACTION_AMT))
-             else:
-                 #if no entry in dictionary, add a new ZIP entry in the dictionary and populate the Transaction amount to the list
-                 dic_zips[ZIP_CODE]=[]
-                 dic_zips[ZIP_CODE].append(int(TRANSACTION_AMT))
+             zip_flag = row['ZIP_CODE'].map(lambda x: False if len(x)<5 else True)
+	           df = df.loc[zip_flag,:]
+	     # Only first five characters of a ZIP CODE
+               ZIP_CODE = df['ZIP_CODE'].apply(lambda x:x[:5])
                  
-                 # Identify duplicate/ return donors
-                   df1 = data_df[df.duplicated(subset={'NAME','ZIP_CODE'},keep='first')]
+             # Identify duplicate/ return donors
+               df1 = data_df[df.duplicated(subset={'NAME','ZIP_CODE'},keep='first')]
                  
              #write to the output file in the required format    
              
-             df['ZIP_CODE'] = df['ZIP_CODE'].apply(lambda x:x[:5])
+             ZIP_CODE = df['ZIP_CODE'].apply(lambda x:x[:5])
 	             
-	             # for cumulative donations
-            df1['SUM_AMT'] = df1['TRANSACTION_AMT'].cumsum()
+	     # for cumulative donations
+             SUM_AMT = df1['TRANSACTION_AMT'].sum_amt()
+	     percentile_index=(math.ceil((self.percentile/100)*index))-1
              
-	                  percentile_index=(math.ceil((self.percentile/100)*index))-1
-             
-             file.write("{}|{}|{}|{}|{}\n".format(CMTE_ID,ZIP_CODE,YEAR,df1[TRANSACTION_AMT].iloc[percentile_index],row[CUMSUM],index)
+             file.write("{}|{}|{}|{}|{}\n".format(CMTE_ID,ZIP_CODE,YEAR,df1[TRANSACTION_AMT].iloc[percentile_index],row[SUM_AMT],index)
          file.close()   
          return(None)
          
@@ -105,7 +101,6 @@ if __name__ == "__main__":
     zip_output=sys.argv[2]
     #third input as output file name 3
     date_output=sys.argv[3]
-    political_donors=FindRepeatDonors(file)
-    #call the cladd FindRepeatDonors and the functions to create the output files
-    df=political_donors.preProcessing()
-    political_donors.percentile_by_zip(df,zip_output)
+    donors=FindRepeatDonors(file)
+    df=donors.preProcessing()
+    donors.percentile_by_zip(df,zip_output)
